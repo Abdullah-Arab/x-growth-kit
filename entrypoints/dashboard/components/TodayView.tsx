@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { app, parseDateKey, type MetricProgress } from '@/src/lib';
+import { CheckCircle } from '@/src/ui/CheckCircle';
 import { METRIC_LABELS } from '@/src/ui/labels';
 import { useLiveQuery } from '@/src/ui/useLiveQuery';
 import { useToday } from '@/src/ui/useToday';
@@ -113,22 +114,5 @@ function StepButton(props: {
     >
       {props.children}
     </button>
-  );
-}
-
-function CheckCircle({ done }: { done: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
-        done ? 'border-success bg-success text-black' : 'border-border'
-      }`}
-    >
-      {done && (
-        <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
-          <path d="M3.5 8.5l3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </span>
   );
 }
