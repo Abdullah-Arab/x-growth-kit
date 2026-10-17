@@ -8,7 +8,7 @@ export interface TweetData {
 }
 
 /** First match inside `article` that isn't part of an embedded quote tweet. */
-function ownFirst(article: Element, selector: string): Element | null {
+export function ownFirst(article: Element, selector: string): Element | null {
   for (const el of article.querySelectorAll(selector)) {
     const quote = el.closest(SELECTORS.quotedTweet);
     if (!quote || !article.contains(quote)) return el;

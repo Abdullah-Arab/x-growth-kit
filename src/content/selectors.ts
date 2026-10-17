@@ -26,6 +26,10 @@ export const SELECTORS = {
   /** UNVERIFIED (no fixture): X's "Your post was sent. View" toast. */
   toast: '[data-testid="toast"]',
   statusLink: 'a[href*="/status/"]',
+
+  // --- List radar ---
+  /** Animated number inside an action button (empty when the count is 0). */
+  actionCount: '[data-testid="app-text-transition-container"]',
 } as const;
 
 /** Patterns that go with the selectors above. */
@@ -35,6 +39,10 @@ export const PATTERNS = {
   /** A tweet detail page, where the inline composer replies to the open tweet. */
   statusPagePath: /^\/[A-Za-z0-9_]{1,15}\/status\/\d+\/?$/,
   statusIdInHref: /\/status\/(\d+)/,
+  /** A List timeline: x.com/i/lists/123 (not its members/followers sub-pages). */
+  listPagePath: /^\/i\/lists\/\d+\/?$/,
+  /** Reply button aria-label starts with the exact count: "0 Replies. Reply", "1,234 Replies. Reply". */
+  leadingCount: /^\s*(\d[\d,.\s\u00a0\u202f]*)/,
 } as const;
 
 /** Attribute on our own injected elements (not an X selector, but kept here with the rest). */
@@ -43,4 +51,9 @@ export const OWN = {
   saveHost: '[data-xgk-save]',
   pickerHostAttr: 'data-xgk-picker',
   toastHostAttr: 'data-xgk-toast',
+  radarBadgeAttr: 'data-xgk-radar',
+  radarBadge: '[data-xgk-radar]',
+  /** Set on a tweet <article> that the list radar highlights. */
+  radarFreshAttr: 'data-xgk-fresh',
+  radarStyleId: 'xgk-radar-style',
 } as const;

@@ -1,5 +1,6 @@
 import { storage } from 'wxt/utils/storage';
 import type { AppData, DailyLog, DateKey, Draft, Settings, SwipeItem } from '../types';
+import { migrateSettingsToV2 } from '../migrations';
 import { dailyLogsItem, draftsItem, settingsItem, swipesItem } from './items';
 
 // Repositories: plain data access over chrome.storage.local. No business rules.
@@ -7,6 +8,8 @@ import { dailyLogsItem, draftsItem, settingsItem, swipesItem } from './items';
 export interface SettingsRepository {
   get(): Promise<Settings>;
   save(settings: Settings): Promise<void>;
+  /** Called with the new settings whenever they change, from any extension context. Returns unwatch. */
+  watch(callback: (settings: Settings) => void): () => void;
 }
 
 export interface DailyLogRepository {
@@ -49,8 +52,10 @@ const byDate = (a: DailyLog, b: DailyLog) => a.date.localeCompare(b.date);
 
 export function createSettingsRepository(): SettingsRepository {
   return {
-    get: () => settingsItem.getValue(),
+    // Filling defaults on read too covers data written without a version marker (e.g. imports).
+    get: async () => migrateSettingsToV2(await settingsItem.getValue()),
     save: (settings) => settingsItem.setValue(settings),
+    watch: (callback) => settingsItem.watch((value) => callback(migrateSettingsToV2(value))),
   };
 }
 
@@ -117,7 +122,12 @@ export function createSnapshotRepository(): SnapshotRepository {
         swipesItem.getValue(),
         draftsItem.getValue(),
       ]);
-      return { settings, dailyLogs: Object.values(logs).sort(byDate), swipes, drafts };
+      return {
+        settings: migrateSettingsToV2(settings),
+        dailyLogs: Object.values(logs).sort(byDate),
+        swipes,
+        drafts,
+      };
     },
     async writeAll(data) {
       const logs = Object.fromEntries(data.dailyLogs.map((l) => [l.date, l]));

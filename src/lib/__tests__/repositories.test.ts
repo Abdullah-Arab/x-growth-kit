@@ -17,7 +17,7 @@ const swipe = (id: string): SwipeItem => ({
 describe('repositories', () => {
   it('settings fall back to defaults and persist', async () => {
     expect(await repos.settings.get()).toEqual(DEFAULT_SETTINGS);
-    const next = { targets: { ...DEFAULT_SETTINGS.targets, replies: 25 } };
+    const next = { ...DEFAULT_SETTINGS, targets: { ...DEFAULT_SETTINGS.targets, replies: 25 } };
     await repos.settings.save(next);
     expect(await repos.settings.get()).toEqual(next);
   });

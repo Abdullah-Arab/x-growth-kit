@@ -39,6 +39,22 @@ describe('settings use cases', () => {
     await expect(uc.settings.updateTargets({ replies: 1.5 })).rejects.toThrow();
   });
 
+  it('updates list radar settings with validation, leaving targets alone', async () => {
+    const s = await uc.settings.updateListRadar({ maxAgeMinutes: 30, enabled: false });
+    expect(s.listRadar).toEqual({ enabled: false, maxAgeMinutes: 30, maxReplies: 10 });
+    expect(s.targets.replies).toBe(10);
+    await expect(uc.settings.updateListRadar({ maxAgeMinutes: 0 })).rejects.toThrow();
+    await expect(uc.settings.updateListRadar({ maxReplies: 2.5 })).rejects.toThrow();
+  });
+
+  it('watchSettings fires on change', async () => {
+    const seen: boolean[] = [];
+    const unwatch = uc.settings.watchSettings((s) => seen.push(s.listRadar.enabled));
+    await uc.settings.updateListRadar({ enabled: false });
+    unwatch();
+    expect(seen).toEqual([false]);
+  });
+
   it('merges partial targets', async () => {
     const s = await uc.settings.updateTargets({ replies: 20 });
     expect(s.targets).toEqual({ tweets: 3, replies: 20, questionTweets: 1, listChecks: 2 });

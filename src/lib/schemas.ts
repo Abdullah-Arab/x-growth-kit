@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TEMPLATE_IDS } from './templates';
 import { migrateDraftToV2 } from './migrations';
-import { DRAFT_STATUSES } from './types';
+import { DEFAULT_SETTINGS, DRAFT_STATUSES, LIST_RADAR_LIMITS } from './types';
 
 // Runtime validation for imported JSON. Mirrors ./types.ts.
 
@@ -16,7 +16,19 @@ const metricCounts = z.object({
   listChecks: count,
 });
 
-export const settingsSchema = z.object({ targets: metricCounts });
+const { maxAgeMinutes, maxReplies } = LIST_RADAR_LIMITS;
+
+export const settingsSchema = z.object({
+  targets: metricCounts,
+  // Added after schemaVersion 2 shipped; older backups don't have it.
+  listRadar: z
+    .object({
+      enabled: z.boolean(),
+      maxAgeMinutes: z.number().int().min(maxAgeMinutes.min).max(maxAgeMinutes.max),
+      maxReplies: z.number().int().min(maxReplies.min).max(maxReplies.max),
+    })
+    .default(DEFAULT_SETTINGS.listRadar),
+});
 
 export const dailyLogSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

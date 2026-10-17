@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { app, ImportError, METRICS, type DailyTargets, type Metric } from '@/src/lib';
+import {
+  app,
+  ImportError,
+  LIST_RADAR_LIMITS,
+  METRICS,
+  type DailyTargets,
+  type ListRadarSettings,
+  type Metric,
+} from '@/src/lib';
 import { METRIC_LABELS } from '@/src/ui/labels';
 import { useLiveQuery } from '@/src/ui/useLiveQuery';
 
@@ -11,6 +19,7 @@ export function SettingsView() {
   return (
     <section className="space-y-4 p-4">
       <TargetsForm />
+      <ListRadarForm />
       <BackupPanel />
     </section>
   );
@@ -98,6 +107,142 @@ function TargetsForm() {
       </div>
     </form>
   );
+}
+
+type RadarField = 'maxAgeMinutes' | 'maxReplies';
+const RADAR_FIELDS: { key: RadarField; label: string; suffix: string }[] = [
+  { key: 'maxAgeMinutes', label: 'Younger than', suffix: 'minutes' },
+  { key: 'maxReplies', label: 'Fewer than', suffix: 'replies' },
+];
+
+function ListRadarForm() {
+  const settings = useLiveQuery(() => app.settings.getSettings(), []);
+  const [draft, setDraft] = useState<Record<RadarField, string> | null>(null);
+  const [status, setStatus] = useState<Status>(null);
+
+  useEffect(() => {
+    if (settings && !draft) setDraft(radarStrings(settings.listRadar));
+  }, [settings, draft]);
+
+  if (!settings || !draft) return null;
+  const radar = settings.listRadar;
+
+  const errors = Object.fromEntries(
+    RADAR_FIELDS.map(({ key }) => [key, validateRange(draft[key], LIST_RADAR_LIMITS[key])]),
+  ) as Record<RadarField, string | null>;
+  const valid = RADAR_FIELDS.every(({ key }) => !errors[key]);
+  const dirty = RADAR_FIELDS.some(({ key }) => draft[key] !== String(radar[key]));
+
+  async function save(patch: Partial<ListRadarSettings>, message: string) {
+    try {
+      const next = await app.settings.updateListRadar(patch);
+      setDraft(radarStrings(next.listRadar));
+      setStatus({ kind: 'ok', text: message });
+    } catch (err) {
+      setStatus({ kind: 'error', text: (err as Error).message });
+    }
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!valid) return;
+    save({ maxAgeMinutes: Number(draft!.maxAgeMinutes), maxReplies: Number(draft!.maxReplies) }, 'Thresholds saved.');
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="rounded-2xl border border-border p-4" noValidate>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold">List radar</h2>
+          <p className="mt-0.5 text-sm text-muted">
+            On your X List timelines (x.com/i/lists/…), badge each tweet with its age and reply count, and highlight
+            fresh ones that are still easy to get noticed in.
+          </p>
+        </div>
+        <Switch
+          checked={radar.enabled}
+          label="Enable list radar"
+          onChange={(enabled) => save({ enabled }, enabled ? 'List radar on.' : 'List radar off.')}
+        />
+      </div>
+
+      <fieldset disabled={!radar.enabled} className="mt-4 disabled:opacity-50">
+        <legend className="text-sm font-medium">Highlight tweets that are</legend>
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          {RADAR_FIELDS.map(({ key, label, suffix }) => (
+            <label key={key} className="block">
+              <span className="text-sm text-muted">{label}</span>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={LIST_RADAR_LIMITS[key].min}
+                  max={LIST_RADAR_LIMITS[key].max}
+                  step={1}
+                  value={draft[key]}
+                  onChange={(e) => {
+                    setDraft({ ...draft, [key]: e.target.value });
+                    setStatus(null);
+                  }}
+                  aria-invalid={!!errors[key]}
+                  className="w-24 rounded-lg border border-border bg-bg px-3 py-2 tabular-nums outline-none focus:border-accent aria-[invalid=true]:border-danger"
+                />
+                <span className="text-sm">{suffix}</span>
+              </div>
+              {errors[key] && <span className="mt-1 block text-xs text-danger">{errors[key]}</span>}
+            </label>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">Both must be true. Tweets whose reply count can't be read are never highlighted.</p>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={!valid || !dirty}
+            className="rounded-full bg-text px-5 py-2 text-sm font-bold text-bg hover:bg-text/90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Save
+          </button>
+          {dirty && (
+            <button type="button" onClick={() => setDraft(radarStrings(radar))} className="text-sm text-muted hover:text-text">
+              Reset
+            </button>
+          )}
+          <StatusText status={status} />
+        </div>
+      </fieldset>
+      {!radar.enabled && <StatusText status={status} />}
+    </form>
+  );
+}
+
+function Switch(props: { checked: boolean; label: string; onChange: (checked: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={props.checked}
+      aria-label={props.label}
+      onClick={() => props.onChange(!props.checked)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${props.checked ? 'bg-accent' : 'bg-border'}`}
+    >
+      <span
+        className={`absolute top-1 left-1 size-5 rounded-full bg-white transition-transform ${props.checked ? 'translate-x-5' : ''}`}
+      />
+    </button>
+  );
+}
+
+function radarStrings(r: ListRadarSettings): Record<RadarField, string> {
+  return { maxAgeMinutes: String(r.maxAgeMinutes), maxReplies: String(r.maxReplies) };
+}
+
+function validateRange(value: string, { min, max }: { min: number; max: number }): string | null {
+  if (value.trim() === '') return 'Required';
+  if (!/^\d+$/.test(value)) return 'Whole number';
+  const n = Number(value);
+  if (n < min || n > max) return `Between ${min} and ${max}`;
+  return null;
 }
 
 function BackupPanel() {

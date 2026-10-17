@@ -1,6 +1,6 @@
 import { storage } from 'wxt/utils/storage';
 import type { DailyLog, DateKey, Draft, Settings, SwipeItem } from '../types';
-import { migrateDraftToV2 } from '../migrations';
+import { migrateDraftToV2, migrateSettingsToV2 } from '../migrations';
 import { DEFAULT_SETTINGS } from '../types';
 
 // Raw chrome.storage.local items. Only repositories should touch these.
@@ -8,7 +8,10 @@ import { DEFAULT_SETTINGS } from '../types';
 
 export const settingsItem = storage.defineItem<Settings>('local:settings', {
   fallback: DEFAULT_SETTINGS,
-  version: 1,
+  version: 2,
+  migrations: {
+    2: migrateSettingsToV2,
+  },
 });
 
 export const dailyLogsItem = storage.defineItem<Record<DateKey, DailyLog>>('local:dailyLogs', {

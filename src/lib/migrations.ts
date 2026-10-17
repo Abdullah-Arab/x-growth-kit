@@ -1,4 +1,5 @@
-import type { Draft, DraftStatus } from './types';
+import type { Draft, DraftStatus, Settings } from './types';
+import { DEFAULT_SETTINGS } from './types';
 
 /** Draft status names before v2 (idea → drafting → ready → posted). */
 const V1_STATUS_MAP: Record<string, DraftStatus> = {
@@ -22,4 +23,14 @@ export function migrateDraftToV2(draft: Record<string, unknown>): Draft {
         ? draft.postedAt
         : (draft.updatedAt as number);
   return { ...(draft as unknown as Draft), status, postedAt };
+}
+
+/** v2 adds listRadar. Fills any missing fields with defaults; idempotent. */
+export function migrateSettingsToV2(settings: Partial<Settings> | null | undefined): Settings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    targets: { ...DEFAULT_SETTINGS.targets, ...settings?.targets },
+    listRadar: { ...DEFAULT_SETTINGS.listRadar, ...settings?.listRadar },
+  };
 }

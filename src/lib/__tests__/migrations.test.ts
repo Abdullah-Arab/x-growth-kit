@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { draftsItem } from '../storage/items';
-import { migrateDraftToV2 } from '../migrations';
+import { draftsItem, settingsItem } from '../storage/items';
+import { migrateDraftToV2, migrateSettingsToV2 } from '../migrations';
 import { setup } from './setup';
 
 const { uc } = setup();
@@ -62,5 +62,28 @@ describe('draft v1 → v2 migration', () => {
     const payload = await uc.backup.exportData();
     const bad = { ...payload, data: { ...payload.data, drafts: [{ ...v1('ready'), postedAt: null }] } };
     await expect(uc.backup.importData(JSON.stringify(bad))).rejects.toThrow();
+  });
+});
+
+describe('settings v1 → v2 migration (listRadar)', () => {
+  it('adds listRadar defaults, keeps targets, and is idempotent', () => {
+    const v2 = migrateSettingsToV2({ targets: { tweets: 5, replies: 20, questionTweets: 2, listChecks: 3 } });
+    expect(v2.listRadar).toEqual({ enabled: true, maxAgeMinutes: 15, maxReplies: 10 });
+    expect(v2.targets.replies).toBe(20);
+    expect(migrateSettingsToV2(v2)).toEqual(v2);
+  });
+
+  it('runs on stored v1 settings', async () => {
+    await fakeBrowser.storage.local.set({ settings: { targets: { tweets: 5, replies: 20, questionTweets: 2, listChecks: 3 } } });
+    await settingsItem.migrate();
+    const s = await uc.settings.getSettings();
+    expect(s).toMatchObject({ targets: { replies: 20 }, listRadar: { enabled: true, maxAgeMinutes: 15, maxReplies: 10 } });
+  });
+
+  it('fills listRadar defaults when importing a backup without it', async () => {
+    const payload = await uc.backup.exportData();
+    const { listRadar: _, ...settingsWithout } = payload.data.settings;
+    await uc.backup.importData(JSON.stringify({ ...payload, data: { ...payload.data, settings: settingsWithout } }));
+    expect((await uc.settings.getSettings()).listRadar).toEqual({ enabled: true, maxAgeMinutes: 15, maxReplies: 10 });
   });
 });

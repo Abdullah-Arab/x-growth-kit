@@ -4,7 +4,9 @@ import {
   createSwipeRepository,
 } from '@/src/lib/storage';
 import { createDailyLogUseCases } from '@/src/lib/usecases/dailyLog';
+import { createSettingsUseCases } from '@/src/lib/usecases/settings';
 import { createSwipeUseCases } from '@/src/lib/usecases/swipes';
+import { mountListRadarFeature } from '@/src/content/listRadar';
 import { mountReplyCounter } from '@/src/content/replyCounter';
 import { mountSwipeSaver } from '@/src/content/swipeSaver';
 
@@ -24,6 +26,11 @@ export default defineContentScript({
         settings: createSettingsRepository(),
       });
       mountReplyCounter(dailyLog, ctx);
+    } catch {
+      // never crash the page
+    }
+    try {
+      mountListRadarFeature(createSettingsUseCases({ settings: createSettingsRepository() }), ctx);
     } catch {
       // never crash the page
     }

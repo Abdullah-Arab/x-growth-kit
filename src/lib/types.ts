@@ -9,8 +9,18 @@ export type MetricCounts = Record<Metric, number>;
 
 export type DailyTargets = MetricCounts;
 
+/** Highlights fresh, low-competition tweets on x.com list timelines. */
+export interface ListRadarSettings {
+  enabled: boolean;
+  /** Highlight tweets younger than this. */
+  maxAgeMinutes: number;
+  /** …that also have fewer replies than this. */
+  maxReplies: number;
+}
+
 export interface Settings {
   targets: DailyTargets;
+  listRadar: ListRadarSettings;
 }
 
 export interface DailyLog {
@@ -64,7 +74,13 @@ export interface ExportPayload {
 
 export const DEFAULT_SETTINGS: Settings = {
   targets: { tweets: 3, replies: 10, questionTweets: 1, listChecks: 2 },
+  listRadar: { enabled: true, maxAgeMinutes: 15, maxReplies: 10 },
 };
+
+export const LIST_RADAR_LIMITS = {
+  maxAgeMinutes: { min: 1, max: 1440 },
+  maxReplies: { min: 1, max: 10_000 },
+} as const;
 
 export function emptyCounts(): MetricCounts {
   return { tweets: 0, replies: 0, questionTweets: 0, listChecks: 0 };
