@@ -6,5 +6,13 @@ export const app = createUseCases(createRepositories());
 
 export * from './types';
 export * from './templates';
-export { toDateKey } from './date';
-export { ImportError, type DayProgress, type ImportResult, type MetricProgress } from './usecases';
+export { addDays, parseDateKey, toDateKey, weekday } from './date';
+export {
+  ImportError,
+  type DayProgress,
+  type Heatmap,
+  type HeatmapDay,
+  type HeatLevel,
+  type ImportResult,
+  type MetricProgress,
+} from './usecases';

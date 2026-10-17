@@ -28,7 +28,15 @@ export function createDailyLogUseCases(deps: {
     return (await dailyLogs.get(date)) ?? { date, counts: emptyCounts(), updatedAt: 0 };
   }
 
-  async function setCount(metric: Metric, value: number, date: DateKey = toDateKey()) {
+  // Counter writes are read-modify-write; queue them so rapid clicks don't lose updates.
+  let queue: Promise<unknown> = Promise.resolve();
+  function serialize<T>(fn: () => Promise<T>): Promise<T> {
+    const run = queue.then(fn, fn);
+    queue = run.catch(() => {});
+    return run;
+  }
+
+  async function writeCount(metric: Metric, value: number, date: DateKey) {
     const log = await getOrEmpty(date);
     const next: DailyLog = {
       ...log,
@@ -39,10 +47,16 @@ export function createDailyLogUseCases(deps: {
     return next;
   }
 
+  function setCount(metric: Metric, value: number, date: DateKey = toDateKey()) {
+    return serialize(() => writeCount(metric, value, date));
+  }
+
   /** Manual +1 / -1 fallback for every auto-detected metric. Never goes below 0. */
-  async function increment(metric: Metric, delta = 1, date: DateKey = toDateKey()) {
-    const log = await getOrEmpty(date);
-    return setCount(metric, log.counts[metric] + delta, date);
+  function increment(metric: Metric, delta = 1, date: DateKey = toDateKey()) {
+    return serialize(async () => {
+      const log = await getOrEmpty(date);
+      return writeCount(metric, log.counts[metric] + delta, date);
+    });
   }
 
   async function getProgress(date: DateKey = toDateKey()): Promise<DayProgress> {
