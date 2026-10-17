@@ -1,4 +1,5 @@
 import type { SwipeRepository } from '../storage';
+import { normalizeTweetUrl } from '../tweetUrl';
 import type { FormatTag, SwipeItem } from '../types';
 
 export type NewSwipe = Pick<SwipeItem, 'tweetUrl' | 'text' | 'author'> &
@@ -9,10 +10,15 @@ export type SwipePatch = Partial<Pick<SwipeItem, 'text' | 'author' | 'formatTag'
 export function createSwipeUseCases(deps: { swipes: SwipeRepository }) {
   const { swipes } = deps;
 
+  async function getByUrl(tweetUrl: string): Promise<SwipeItem | null> {
+    const url = normalizeTweetUrl(tweetUrl);
+    return (await swipes.list()).find((s) => s.tweetUrl === url) ?? null;
+  }
+
   /** Saving the same tweet URL twice returns the existing item instead of duplicating it. */
   async function saveSwipe(input: NewSwipe): Promise<SwipeItem> {
-    const tweetUrl = input.tweetUrl.trim();
-    const existing = (await swipes.list()).find((s) => s.tweetUrl === tweetUrl);
+    const tweetUrl = normalizeTweetUrl(input.tweetUrl);
+    const existing = await getByUrl(tweetUrl);
     if (existing) return existing;
 
     const item: SwipeItem = {
@@ -39,8 +45,10 @@ export function createSwipeUseCases(deps: { swipes: SwipeRepository }) {
   return {
     saveSwipe,
     listSwipes,
-    isSaved: async (tweetUrl: string) =>
-      (await swipes.list()).some((s) => s.tweetUrl === tweetUrl.trim()),
+    getByUrl,
+    isSaved: async (tweetUrl: string) => (await getByUrl(tweetUrl)) !== null,
+    /** Fires with the full list whenever swipes change anywhere in the extension. */
+    watchSwipes: (callback: (items: SwipeItem[]) => void) => swipes.watch(callback),
     updateSwipe: (id: string, patch: SwipePatch) => swipes.update(id, patch),
     deleteSwipe: (id: string) => swipes.remove(id),
   };

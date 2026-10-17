@@ -24,6 +24,8 @@ export interface CollectionRepository<T extends { id: string }> {
   /** Returns the updated item, or null if no item has that id. */
   update(id: string, patch: Partial<Omit<T, 'id'>>): Promise<T | null>;
   remove(id: string): Promise<void>;
+  /** Called with the full list whenever it changes, from any extension context. Returns unwatch. */
+  watch(callback: (items: T[]) => void): () => void;
 }
 
 export type SwipeRepository = CollectionRepository<SwipeItem>;
@@ -74,7 +76,11 @@ export function createDailyLogRepository(): DailyLogRepository {
   };
 }
 
-type ListItem<T> = { getValue(): Promise<T[]>; setValue(value: T[]): Promise<void> };
+type ListItem<T> = {
+  getValue(): Promise<T[]>;
+  setValue(value: T[]): Promise<void>;
+  watch(callback: (value: T[] | null) => void): () => void;
+};
 
 function createCollectionRepository<T extends { id: string }>(
   item: ListItem<T>,
@@ -98,6 +104,7 @@ function createCollectionRepository<T extends { id: string }>(
     async remove(id) {
       await item.setValue((await item.getValue()).filter((x) => x.id !== id));
     },
+    watch: (callback) => item.watch((value) => callback(value ?? [])),
   };
 }
 
@@ -124,12 +131,15 @@ export function createSnapshotRepository(): SnapshotRepository {
   };
 }
 
+export const createSwipeRepository = (): SwipeRepository => createCollectionRepository(swipesItem);
+export const createDraftRepository = (): DraftRepository => createCollectionRepository(draftsItem);
+
 export function createRepositories(): Repositories {
   return {
     settings: createSettingsRepository(),
     dailyLogs: createDailyLogRepository(),
-    swipes: createCollectionRepository(swipesItem),
-    drafts: createCollectionRepository(draftsItem),
+    swipes: createSwipeRepository(),
+    drafts: createDraftRepository(),
     snapshot: createSnapshotRepository(),
   };
 }

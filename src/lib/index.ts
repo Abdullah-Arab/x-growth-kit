@@ -6,6 +6,7 @@ export const app = createUseCases(createRepositories());
 
 export * from './types';
 export * from './templates';
+export { normalizeTweetUrl } from './tweetUrl';
 export { addDays, parseDateKey, toDateKey, weekday } from './date';
 export {
   ImportError,

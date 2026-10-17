@@ -76,3 +76,30 @@ describe('draft use cases', () => {
     expect(await uc.drafts.listDrafts()).toHaveLength(0);
   });
 });
+
+describe('tweet URL normalization', () => {
+  it('collapses variants of the same tweet to one swipe', async () => {
+    const a = await uc.swipes.saveSwipe({
+      tweetUrl: 'https://twitter.com/SomeOne/status/123?s=20',
+      text: '',
+      author: '',
+    });
+    expect(a.tweetUrl).toBe('https://x.com/someone/status/123');
+    const b = await uc.swipes.saveSwipe({ tweetUrl: '/someone/status/123/photo/1', text: '', author: '' });
+    expect(b.id).toBe(a.id);
+    expect(await uc.swipes.getByUrl('https://x.com/someone/status/123/analytics')).toMatchObject({ id: a.id });
+  });
+});
+
+describe('watchSwipes', () => {
+  it('notifies with the full list on change', async () => {
+    const seen: number[] = [];
+    const unwatch = uc.swipes.watchSwipes((items) => seen.push(items.length));
+    await uc.swipes.saveSwipe({ tweetUrl: 'https://x.com/a/status/1', text: '', author: '' });
+    await uc.swipes.saveSwipe({ tweetUrl: 'https://x.com/a/status/2', text: '', author: '' });
+    unwatch();
+    await uc.swipes.saveSwipe({ tweetUrl: 'https://x.com/a/status/3', text: '', author: '' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(seen).toEqual([1, 2]);
+  });
+});
