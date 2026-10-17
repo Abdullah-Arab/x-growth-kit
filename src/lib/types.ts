@@ -31,7 +31,7 @@ export interface SwipeItem {
   savedAt: number;
 }
 
-export const DRAFT_STATUSES = ['idea', 'drafting', 'ready', 'posted'] as const;
+export const DRAFT_STATUSES = ['idea', 'drafted', 'posted'] as const;
 export type DraftStatus = (typeof DRAFT_STATUSES)[number];
 
 export interface Draft {
@@ -41,6 +41,8 @@ export interface Draft {
   status: DraftStatus;
   createdAt: number;
   updatedAt: number;
+  /** When it was marked posted; null otherwise. Drives the weekly review. */
+  postedAt: number | null;
 }
 
 export interface AppData {
@@ -50,7 +52,8 @@ export interface AppData {
   drafts: Draft[];
 }
 
-export const EXPORT_SCHEMA_VERSION = 1;
+/** v2: draft statuses idea/drafted/posted + postedAt. v1 backups are still importable. */
+export const EXPORT_SCHEMA_VERSION = 2;
 
 export interface ExportPayload {
   app: 'x-growth-kit';

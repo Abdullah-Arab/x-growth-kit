@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TEMPLATE_IDS } from './templates';
-import { DRAFT_STATUSES, EXPORT_SCHEMA_VERSION } from './types';
+import { migrateDraftToV2 } from './migrations';
+import { DRAFT_STATUSES } from './types';
 
 // Runtime validation for imported JSON. Mirrors ./types.ts.
 
@@ -40,16 +41,30 @@ export const draftSchema = z.object({
   status: z.enum(DRAFT_STATUSES),
   createdAt: timestamp,
   updatedAt: timestamp,
+  postedAt: timestamp.nullable(),
 });
 
-export const exportPayloadSchema = z.object({
-  app: z.literal('x-growth-kit'),
-  schemaVersion: z.literal(EXPORT_SCHEMA_VERSION),
-  exportedAt: z.string(),
-  data: z.object({
-    settings: settingsSchema,
-    dailyLogs: z.array(dailyLogSchema),
-    swipes: z.array(swipeItemSchema),
-    drafts: z.array(draftSchema),
-  }),
-});
+/** v1 drafts: old status names, no postedAt. Upgraded to v2 on parse. */
+const draftSchemaV1 = draftSchema
+  .omit({ status: true, postedAt: true })
+  .extend({ status: z.enum(['idea', 'drafting', 'ready', 'posted']) })
+  .transform(migrateDraftToV2);
+
+const payload = <D extends z.ZodType>(version: 1 | 2, draft: D) =>
+  z.object({
+    app: z.literal('x-growth-kit'),
+    schemaVersion: z.literal(version),
+    exportedAt: z.string(),
+    data: z.object({
+      settings: settingsSchema,
+      dailyLogs: z.array(dailyLogSchema),
+      swipes: z.array(swipeItemSchema),
+      drafts: z.array(draft),
+    }),
+  });
+
+/** Accepts current (v2) and older (v1) backups; output is always the current shape. */
+export const exportPayloadSchema = z.discriminatedUnion('schemaVersion', [
+  payload(2, draftSchema),
+  payload(1, draftSchemaV1),
+]);

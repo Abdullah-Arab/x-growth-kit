@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { parseDateKey, type Heatmap as HeatmapData, type HeatLevel, type HeatmapDay } from '@/src/lib';
 
-const LEVEL_CLASS: Record<HeatLevel, string> = {
+export const LEVEL_CLASS: Record<HeatLevel, string> = {
   0: 'bg-heat-0',
   1: 'bg-heat-1',
   2: 'bg-heat-2',

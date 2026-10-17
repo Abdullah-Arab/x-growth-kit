@@ -24,3 +24,8 @@ export function addDays(key: DateKey, days: number): DateKey {
 export function weekday(key: DateKey): number {
   return parseDateKey(key).getDay();
 }
+
+/** Monday of the week containing `key`. */
+export function startOfWeek(key: DateKey): DateKey {
+  return addDays(key, -((weekday(key) + 6) % 7));
+}

@@ -64,14 +64,14 @@ async function replyViaModal(id: string) {
 }
 
 describe('mountReplyDetector', () => {
-  let onReplyConfirmed: ReturnType<typeof vi.fn>;
+  let onReplyConfirmed: ReturnType<typeof vi.fn<(id: string) => void>>;
   let unmount: () => void;
 
   beforeEach(() => {
     document.body.innerHTML = FIXTURE;
     history.replaceState({}, '', '/home');
     clock = 1_000_000;
-    onReplyConfirmed = vi.fn();
+    onReplyConfirmed = vi.fn<(id: string) => void>();
     unmount = mountReplyDetector({ onReplyConfirmed, now }, lifecycle);
   });
   afterEach(() => unmount());

@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { DraftsView } from './components/DraftsView';
+import { LibraryView } from './components/LibraryView';
 import { SettingsView } from './components/SettingsView';
 import { StreakView } from './components/StreakView';
 import { TodayView } from './components/TodayView';
+import { WeeklyView } from './components/WeeklyView';
 
 const TABS = ['Today', 'Streak', 'Library', 'Drafts', 'Weekly'] as const;
 type View = (typeof TABS)[number] | 'Settings';
@@ -46,10 +49,10 @@ export default function App() {
       <main>
         {view === 'Today' && <TodayView />}
         {view === 'Streak' && <StreakView />}
+        {view === 'Library' && <LibraryView />}
+        {view === 'Drafts' && <DraftsView />}
+        {view === 'Weekly' && <WeeklyView />}
         {view === 'Settings' && <SettingsView />}
-        {(view === 'Library' || view === 'Drafts' || view === 'Weekly') && (
-          <p className="p-4 text-muted">{view} coming soon.</p>
-        )}
       </main>
     </div>
   );

@@ -34,11 +34,17 @@ export function createSwipeUseCases(deps: { swipes: SwipeRepository }) {
     return item;
   }
 
-  /** Newest first. */
-  async function listSwipes(filter?: { formatTag?: FormatTag }): Promise<SwipeItem[]> {
+  /** Newest first. `query` matches text, author, and note (case-insensitive, all words). */
+  async function listSwipes(filter?: { formatTag?: FormatTag; query?: string }): Promise<SwipeItem[]> {
+    const words = (filter?.query ?? '').toLowerCase().split(/\s+/).filter(Boolean);
     const all = await swipes.list();
     return all
       .filter((s) => !filter?.formatTag || s.formatTag === filter.formatTag)
+      .filter((s) => {
+        if (words.length === 0) return true;
+        const haystack = `${s.text}\n${s.author}\n${s.note}`.toLowerCase();
+        return words.every((w) => haystack.includes(w));
+      })
       .sort((a, b) => b.savedAt - a.savedAt);
   }
 

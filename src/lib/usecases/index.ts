@@ -5,6 +5,7 @@ import { createDraftUseCases } from './drafts';
 import { createSettingsUseCases } from './settings';
 import { createStreakUseCases } from './streak';
 import { createSwipeUseCases } from './swipes';
+import { createWeeklyUseCases } from './weekly';
 
 export function createUseCases(repos: Repositories) {
   return {
@@ -14,6 +15,7 @@ export function createUseCases(repos: Repositories) {
     swipes: createSwipeUseCases(repos),
     drafts: createDraftUseCases(repos),
     backup: createBackupUseCases(repos),
+    weekly: createWeeklyUseCases(repos),
   };
 }
 
@@ -23,3 +25,4 @@ export { ImportError, type ImportResult } from './backup';
 export type { DayProgress, MetricProgress } from './dailyLog';
 export type { Heatmap, HeatmapDay, HeatLevel } from './streak';
 export type { NewSwipe, SwipePatch } from './swipes';
+export type { WeekDay, WeeklyReview } from './weekly';

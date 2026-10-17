@@ -69,9 +69,12 @@ describe('draft use cases', () => {
     const d = await uc.drafts.createDraft('myth-vs-reality');
     expect(d.status).toBe('idea');
     await uc.drafts.updateDraftText(d.id, 'Myth: ...');
-    const ready = await uc.drafts.setDraftStatus(d.id, 'ready');
-    expect(ready).toMatchObject({ text: 'Myth: ...', status: 'ready' });
-    expect(await uc.drafts.listDrafts({ status: 'ready' })).toHaveLength(1);
+    const drafted = await uc.drafts.setDraftStatus(d.id, 'drafted');
+    expect(drafted).toMatchObject({ text: 'Myth: ...', status: 'drafted', postedAt: null });
+    expect(await uc.drafts.listDrafts({ status: 'drafted' })).toHaveLength(1);
+    const posted = await uc.drafts.setDraftStatus(d.id, 'posted');
+    expect(posted?.postedAt).toEqual(expect.any(Number));
+    expect((await uc.drafts.setDraftStatus(d.id, 'drafted'))?.postedAt).toBeNull();
     await uc.drafts.deleteDraft(d.id);
     expect(await uc.drafts.listDrafts()).toHaveLength(0);
   });
@@ -101,5 +104,17 @@ describe('watchSwipes', () => {
     await uc.swipes.saveSwipe({ tweetUrl: 'https://x.com/a/status/3', text: '', author: '' });
     await new Promise((r) => setTimeout(r, 0));
     expect(seen).toEqual([1, 2]);
+  });
+});
+
+describe('swipe search', () => {
+  it('matches all words across text, author, and note, case-insensitively', async () => {
+    await uc.swipes.saveSwipe({ tweetUrl: 'u1', text: 'How I grew to 10k', author: '@alice', note: 'great HOOK' });
+    await uc.swipes.saveSwipe({ tweetUrl: 'u2', text: 'Hooks that work', author: '@bob' });
+    const urls = async (query: string) => (await uc.swipes.listSwipes({ query })).map((s) => s.tweetUrl);
+    expect(await urls('hook')).toEqual(expect.arrayContaining(['u1', 'u2']));
+    expect(await urls('hook alice')).toEqual(['u1']);
+    expect(await urls('  ')).toHaveLength(2);
+    expect(await urls('nothing')).toEqual([]);
   });
 });
